@@ -11,7 +11,7 @@ import {
   engineBuckets,
   filtersToParams,
   parseFilters,
-  sortOptions,
+  sortKeys,
   type Filters,
   type SortKey,
 } from "@/lib/filters";
@@ -19,14 +19,16 @@ import { formatPriceShort } from "@/lib/format";
 import { BikeCard } from "./bike-card";
 import { Price } from "./price";
 import { useStore } from "./providers";
+import { Select } from "./select";
+import { useT } from "@/i18n/client";
 
 const transmissions: Transmission[] = ["Automatic", "Semi-Automatic", "Manual"];
 const STEP = 10000;
 const pricePresets = [
-  { label: "Under 200K", min: null, max: 200000 },
-  { label: "200K – 400K", min: 200000, max: 400000 },
-  { label: "400K – 1M", min: 400000, max: 1000000 },
-  { label: "1M +", min: 1000000, max: null },
+  { min: null, max: 200000 },
+  { min: 200000, max: 400000 },
+  { min: 400000, max: 1000000 },
+  { min: 1000000, max: null },
 ];
 
 function toggle<T>(arr: T[], v: T) {
@@ -37,6 +39,7 @@ export function BikeBrowser() {
   const pathname = usePathname();
   const sp = useSearchParams();
   const { saved } = useStore();
+  const t = useT();
   const spKey = sp.toString();
 
   // Local state updates instantly; the URL is kept in sync so searches are shareable.
@@ -97,8 +100,8 @@ export function BikeBrowser() {
   const maxP = filters.maxPrice ?? priceBounds.max;
 
   const chips: { label: string; clear: () => void }[] = [
-    ...filters.categories.map((c) => ({ label: c, clear: () => update({ categories: filters.categories.filter((x) => x !== c) }) })),
-    ...filters.transmissions.map((t) => ({ label: t, clear: () => update({ transmissions: filters.transmissions.filter((x) => x !== t) }) })),
+    ...filters.categories.map((c) => ({ label: t.categories[c].name, clear: () => update({ categories: filters.categories.filter((x) => x !== c) }) })),
+    ...filters.transmissions.map((tr) => ({ label: t.transmissions[tr], clear: () => update({ transmissions: filters.transmissions.filter((x) => x !== tr) }) })),
     ...filters.brands.map((b) => ({ label: b, clear: () => update({ brands: filters.brands.filter((x) => x !== b) }) })),
     ...filters.engines.map((e) => ({
       label: engineBuckets.find((x) => x.id === e)?.label ?? e,
@@ -107,9 +110,9 @@ export function BikeBrowser() {
     ...(filters.minPrice != null || filters.maxPrice != null
       ? [{ label: `${formatPriceShort(minP)} – ${formatPriceShort(maxP)}`, clear: () => update({ minPrice: null, maxPrice: null }) }]
       : []),
-    ...(filters.sale ? [{ label: "On sale", clear: () => update({ sale: false }) }] : []),
-    ...(filters.noLicense ? [{ label: "No license needed", clear: () => update({ noLicense: false }) }] : []),
-    ...(filters.saved ? [{ label: "Saved bikes", clear: () => update({ saved: false }) }] : []),
+    ...(filters.sale ? [{ label: t.browser.onSale, clear: () => update({ sale: false }) }] : []),
+    ...(filters.noLicense ? [{ label: t.browser.noLicenseChip, clear: () => update({ noLicense: false }) }] : []),
+    ...(filters.saved ? [{ label: t.browser.savedChip, clear: () => update({ saved: false }) }] : []),
   ];
 
   const resetAll = () => {
@@ -119,44 +122,45 @@ export function BikeBrowser() {
 
   const panel = (
     <div className="space-y-7">
-      <FilterGroup title="Transmission">
-        {transmissions.map((t) => (
+      <FilterGroup title={t.browser.transmission}>
+        {transmissions.map((tr) => (
           <CheckRow
-            key={t}
-            label={t}
-            count={facet.transmission(t)}
-            checked={filters.transmissions.includes(t)}
-            onChange={() => update({ transmissions: toggle(filters.transmissions, t) })}
+            key={tr}
+            label={t.transmissions[tr]}
+            count={facet.transmission(tr)}
+            checked={filters.transmissions.includes(tr)}
+            onChange={() => update({ transmissions: toggle(filters.transmissions, tr) })}
           />
         ))}
       </FilterGroup>
 
-      <FilterGroup title="Daily price">
+      <FilterGroup title={t.browser.dailyPrice}>
         <DualRange
           min={priceBounds.min}
           max={priceBounds.max}
           value={[minP, maxP]}
+          labels={[t.browser.minPrice, t.browser.maxPrice]}
           onCommit={([a, b]) => update({ minPrice: a <= priceBounds.min ? null : a, maxPrice: b >= priceBounds.max ? null : b })}
         />
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {pricePresets.map((p) => {
+          {pricePresets.map((p, i) => {
             const on = filters.minPrice === p.min && filters.maxPrice === p.max;
             return (
               <button
-                key={p.label}
+                key={i}
                 type="button"
                 data-active={on}
                 onClick={() => update(on ? { minPrice: null, maxPrice: null } : { minPrice: p.min, maxPrice: p.max })}
                 className="chip !px-2.5 !py-1 !text-xs"
               >
-                {p.label}
+                {t.browser.presets[i]}
               </button>
             );
           })}
         </div>
       </FilterGroup>
 
-      <FilterGroup title="Engine size">
+      <FilterGroup title={t.browser.engineSize}>
         <div className="flex flex-wrap gap-1.5">
           {engineBuckets.map((e) => {
             const n = facet.engine(e.id);
@@ -176,16 +180,16 @@ export function BikeBrowser() {
         </div>
       </FilterGroup>
 
-      <FilterGroup title="Brand">
+      <FilterGroup title={t.browser.brand}>
         {brands.map((b) => (
           <CheckRow key={b} label={b} count={facet.brand(b)} checked={filters.brands.includes(b)} onChange={() => update({ brands: toggle(filters.brands, b) })} />
         ))}
       </FilterGroup>
 
-      <FilterGroup title="More">
-        <SwitchRow icon={<Tag className="size-4 text-brand" />} label="On sale" checked={filters.sale} onChange={(v) => update({ sale: v })} />
-        <SwitchRow icon={<BadgeCheck className="size-4 text-navy" />} label="No license needed (50cc)" checked={filters.noLicense} onChange={(v) => update({ noLicense: v })} />
-        <SwitchRow icon={<Heart className="size-4 text-brand" />} label={`Saved bikes (${saved.length})`} checked={filters.saved} onChange={(v) => update({ saved: v })} />
+      <FilterGroup title={t.browser.more}>
+        <SwitchRow icon={<Tag className="size-4 text-brand" />} label={t.browser.onSale} checked={filters.sale} onChange={(v) => update({ sale: v })} />
+        <SwitchRow icon={<BadgeCheck className="size-4 text-navy" />} label={t.browser.noLicense} checked={filters.noLicense} onChange={(v) => update({ noLicense: v })} />
+        <SwitchRow icon={<Heart className="size-4 text-brand" />} label={t.browser.savedBikes(saved.length)} checked={filters.saved} onChange={(v) => update({ saved: v })} />
       </FilterGroup>
     </div>
   );
@@ -195,44 +199,40 @@ export function BikeBrowser() {
       {/* Search + sort bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative flex-1">
-          <span className="sr-only">Search bikes</span>
+          <span className="sr-only">{t.browser.searchLabel}</span>
           <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search model, brand or engine size — e.g. “PCX”, “Honda 650”, “manual”"
+            placeholder={t.browser.searchPlaceholder}
             className="input !rounded-full !py-3.5 !pr-10 !pl-12 !text-[0.95rem] shadow-card"
             type="search"
           />
           {q && (
-            <button type="button" onClick={() => setQ("")} className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted hover:text-ink" aria-label="Clear search">
+            <button type="button" onClick={() => setQ("")} className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted hover:text-ink" aria-label={t.browser.clearSearch}>
               <X className="size-4" />
             </button>
           )}
         </label>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setSheet(true)} className="btn-light relative flex-1 lg:hidden">
-            <SlidersHorizontal className="size-4" /> Filters
+            <SlidersHorizontal className="size-4" /> {t.browser.filters}
             {activeCount > 0 && <span className="grid size-5 place-items-center rounded-full bg-brand text-[0.65rem] text-white">{activeCount}</span>}
           </button>
-          <label className="relative flex-1 sm:flex-none">
-            <span className="sr-only">Sort by</span>
-            <select
-              value={filters.sort}
-              onChange={(e) => update({ sort: e.target.value as SortKey })}
-              className="input w-full cursor-pointer appearance-none !rounded-full !py-3 !pr-9 font-medium sm:w-56"
-            >
-              {sortOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <svg className="pointer-events-none absolute top-1/2 right-4 size-3 -translate-y-1/2 text-muted" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 4.5 3 3 3-3" /></svg>
-          </label>
-          <div className="hidden rounded-full bg-white p-1 ring-1 ring-line sm:flex" role="group" aria-label="Layout">
-            <button type="button" onClick={() => setLayout("grid")} aria-pressed={layout === "grid"} className={`rounded-full p-2 ${layout === "grid" ? "bg-ink text-white" : "text-muted"}`} aria-label="Grid view">
+          <Select<SortKey>
+            className="flex-1 sm:w-60 sm:flex-none"
+            variant="pill"
+            align="right"
+            ariaLabel={t.browser.sortBy}
+            value={filters.sort}
+            onChange={(v) => update({ sort: v })}
+            options={sortKeys.map((k) => ({ value: k, label: t.sort[k] }))}
+          />
+          <div className="hidden rounded-full bg-white p-1 ring-1 ring-line sm:flex" role="group" aria-label={t.browser.layout}>
+            <button type="button" onClick={() => setLayout("grid")} aria-pressed={layout === "grid"} className={`rounded-full p-2 ${layout === "grid" ? "bg-ink text-white" : "text-muted"}`} aria-label={t.browser.grid}>
               <LayoutGrid className="size-4" />
             </button>
-            <button type="button" onClick={() => setLayout("list")} aria-pressed={layout === "list"} className={`rounded-full p-2 ${layout === "list" ? "bg-ink text-white" : "text-muted"}`} aria-label="List view">
+            <button type="button" onClick={() => setLayout("list")} aria-pressed={layout === "list"} className={`rounded-full p-2 ${layout === "list" ? "bg-ink text-white" : "text-muted"}`} aria-label={t.browser.list}>
               <List className="size-4" />
             </button>
           </div>
@@ -242,7 +242,7 @@ export function BikeBrowser() {
       {/* Category chips */}
       <div className="no-scrollbar -mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         <button type="button" data-active={filters.categories.length === 0} onClick={() => update({ categories: [] })} className="chip shrink-0">
-          All bikes
+          {t.browser.allBikes}
         </button>
         {categories.map((c) => (
           <button
@@ -252,7 +252,7 @@ export function BikeBrowser() {
             onClick={() => update({ categories: toggle(filters.categories, c.name) })}
             className="chip shrink-0"
           >
-            {c.name} <span className="opacity-50">{facet.category(c.name)}</span>
+            {t.categories[c.name].name} <span className="opacity-50">{facet.category(c.name)}</span>
           </button>
         ))}
       </div>
@@ -261,10 +261,10 @@ export function BikeBrowser() {
         <aside className="hidden lg:block">
           <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2 pb-10">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Filters</h2>
+              <h2 className="text-lg font-bold">{t.browser.filters}</h2>
               {activeCount > 0 && (
                 <button type="button" onClick={resetAll} className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
-                  <RotateCcw className="size-3" /> Reset
+                  <RotateCcw className="size-3" /> {t.common.reset}
                 </button>
               )}
             </div>
@@ -275,7 +275,7 @@ export function BikeBrowser() {
         <section aria-live="polite">
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <p className="mr-2 text-sm text-muted">
-              <strong className="text-ink">{results.length}</strong> {results.length === 1 ? "bike" : "bikes"} available
+              <strong className="text-ink">{results.length}</strong> {t.browser.available(results.length)}
             </p>
             {chips.map((c) => (
               <button key={c.label} type="button" onClick={c.clear} className="inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-xs font-medium text-white hover:bg-ink-3">
@@ -284,7 +284,7 @@ export function BikeBrowser() {
             ))}
             {chips.length > 1 && (
               <button type="button" onClick={resetAll} className="text-xs font-semibold text-brand hover:underline">
-                Clear all
+                {t.common.clearAll}
               </button>
             )}
           </div>
@@ -300,14 +300,14 @@ export function BikeBrowser() {
               <div className="grid size-14 place-items-center rounded-full bg-brand-50 text-brand">
                 <Search className="size-6" />
               </div>
-              <h3 className="mt-4 text-xl font-bold">No bikes match these filters</h3>
+              <h3 className="mt-4 text-xl font-bold">{t.browser.emptyTitle}</h3>
               <p className="mt-2 max-w-sm text-sm text-muted">
                 {filters.saved && saved.length === 0
-                  ? "You haven't saved any bikes yet — tap the heart on any bike to save it."
-                  : "Try removing a filter or widening the price range. We also have more bikes in the shop — just ask us on WhatsApp."}
+                  ? t.browser.emptySaved
+                  : t.browser.emptyText}
               </p>
               <button type="button" onClick={resetAll} className="btn-dark mt-6">
-                <RotateCcw className="size-4" /> Reset filters
+                <RotateCcw className="size-4" /> {t.browser.resetFilters}
               </button>
             </div>
           )}
@@ -316,21 +316,21 @@ export function BikeBrowser() {
 
       {/* Mobile filter sheet */}
       {sheet && (
-        <div className="fixed inset-0 z-[55] lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+        <div className="fixed inset-0 z-[55] lg:hidden" role="dialog" aria-modal="true" aria-label={t.browser.filters}>
           <div className="absolute inset-0 animate-fade-in bg-ink/50" onClick={() => setSheet(false)} />
           <div className="absolute inset-x-0 bottom-0 flex max-h-[88vh] animate-slide-up flex-col rounded-t-3xl bg-paper">
             <div className="flex items-center justify-between border-b border-line px-5 py-4">
-              <h2 className="text-lg font-bold">Filters</h2>
-              <button type="button" onClick={() => setSheet(false)} className="rounded-full p-1.5 hover:bg-ink/5" aria-label="Close filters">
+              <h2 className="text-lg font-bold">{t.browser.filters}</h2>
+              <button type="button" onClick={() => setSheet(false)} className="rounded-full p-1.5 hover:bg-ink/5" aria-label={t.common.close}>
                 <X className="size-5" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-6">
-              <FilterGroup title="Bike type">
+              <FilterGroup title={t.browser.bikeType}>
                 <div className="flex flex-wrap gap-1.5">
                   {categories.map((c) => (
                     <button key={c.name} type="button" data-active={filters.categories.includes(c.name)} onClick={() => update({ categories: toggle(filters.categories, c.name) })} className="chip !py-1.5 !text-xs">
-                      {c.name} <span className="opacity-50">{facet.category(c.name)}</span>
+                      {t.categories[c.name].name} <span className="opacity-50">{facet.category(c.name)}</span>
                     </button>
                   ))}
                 </div>
@@ -338,9 +338,9 @@ export function BikeBrowser() {
               <div className="mt-7">{panel}</div>
             </div>
             <div className="flex gap-3 border-t border-line bg-white px-5 py-4">
-              <button type="button" onClick={resetAll} className="btn-light">Reset</button>
+              <button type="button" onClick={resetAll} className="btn-light">{t.common.reset}</button>
               <button type="button" onClick={() => setSheet(false)} className="btn-dark flex-1">
-                Show {results.length} bikes
+                {t.browser.showBikes(results.length)}
               </button>
             </div>
           </div>
@@ -383,7 +383,7 @@ function SwitchRow({ label, icon, checked, onChange }: { label: string; icon: Re
   );
 }
 
-function DualRange({ min, max, value, onCommit }: { min: number; max: number; value: [number, number]; onCommit: (v: [number, number]) => void }) {
+function DualRange({ min, max, value, onCommit, labels }: { min: number; max: number; value: [number, number]; onCommit: (v: [number, number]) => void; labels: [string, string] }) {
   const [v, setV] = useState(value);
   useEffect(() => setV(value), [value[0], value[1]]); // eslint-disable-line react-hooks/exhaustive-deps
   const pct = (n: number) => ((n - min) / (max - min)) * 100;
@@ -401,7 +401,7 @@ function DualRange({ min, max, value, onCommit }: { min: number; max: number; va
       <div className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink" style={{ left: `${pct(v[0])}%`, right: `${100 - pct(v[1])}%` }} />
       <input
         type="range"
-        aria-label="Minimum price"
+        aria-label={labels[0]}
         min={min}
         max={max}
         step={STEP}
@@ -413,7 +413,7 @@ function DualRange({ min, max, value, onCommit }: { min: number; max: number; va
       />
       <input
         type="range"
-        aria-label="Maximum price"
+        aria-label={labels[1]}
         min={min}
         max={max}
         step={STEP}

@@ -2,14 +2,14 @@ import { site } from "./site";
 
 export type Currency = "VND" | "USD";
 
-const vnd = new Intl.NumberFormat("en-US");
+const numberFormats = { en: new Intl.NumberFormat("en-US"), vi: new Intl.NumberFormat("vi-VN") };
 
-export function formatPrice(amountVnd: number, currency: Currency = "VND") {
+export function formatPrice(amountVnd: number, currency: Currency = "VND", locale: "en" | "vi" = "en") {
   if (currency === "USD") {
     const usd = amountVnd / site.usdRate;
     return `≈ $${usd < 10 ? usd.toFixed(1) : Math.round(usd)}`;
   }
-  return `${vnd.format(amountVnd)}₫`;
+  return `${numberFormats[locale].format(amountVnd)}₫`;
 }
 
 export function formatPriceShort(amountVnd: number) {
@@ -20,8 +20,8 @@ export function formatPriceShort(amountVnd: number) {
   return `${Math.round(amountVnd / 1000)}K₫`;
 }
 
-export function formatDate(iso: string) {
-  return new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", {
+export function formatDate(iso: string, locale: "en" | "vi" = "en") {
+  return new Date(iso + "T00:00:00Z").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",

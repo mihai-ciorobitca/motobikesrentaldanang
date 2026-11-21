@@ -8,6 +8,8 @@ import { site, whatsappLink, zaloLink } from "@/lib/site";
 import { WhatsAppIcon } from "./icons";
 import { Price } from "./price";
 import { useStore } from "./providers";
+import { Select } from "./select";
+import { useLocale, useT } from "@/i18n/client";
 
 /** Local "today" as YYYY-MM-DD */
 const todayIso = () => {
@@ -23,6 +25,9 @@ const addDays = (isoDate: string, n: number) => {
 
 export function BookingCard({ bike }: { bike: Bike }) {
   const { currency, saved, toggleSaved, compare, toggleCompare } = useStore();
+  const t = useT();
+  const locale = useLocale();
+  const fp = (v: number, c: typeof currency = currency) => formatPrice(v, c, locale);
   // dates are set after mount so server HTML and client agree
   const [today, setToday] = useState("");
   const [start, setStart] = useState("");
@@ -42,12 +47,12 @@ export function BookingCard({ bike }: { bike: Bike }) {
   const longTerm = days >= 7;
 
   const message = [
-    `Hi Quang Nga! I'd like to book:`,
+    t.booking.msg.intro,
     `🏍 ${bike.name}${bike.year ? ` (${bike.year})` : ""} x${qty}`,
-    start && end ? `📅 ${start} → ${end} (${days} day${days > 1 ? "s" : ""})` : "",
-    `💰 Estimated: ${formatPrice(total, "VND")} (${formatPrice(bike.price, "VND")}/day)`,
-    name ? `👤 Name: ${name}` : "",
-    `Is it available?`,
+    start && end ? `📅 ${start} → ${end} (${t.common.days(days)})` : "",
+    `💰 ${t.booking.msg.estimated}: ${fp(total, "VND")} (${fp(bike.price, "VND")}${t.common.perDay})`,
+    name ? `👤 ${t.booking.msg.name}: ${name}` : "",
+    t.booking.msg.available,
   ]
     .filter(Boolean)
     .join("\n");
@@ -59,12 +64,12 @@ export function BookingCard({ bike }: { bike: Bike }) {
           {bike.originalPrice && (
             <div className="flex items-center gap-2">
               <Price vnd={bike.originalPrice} className="text-sm text-muted line-through" />
-              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand">Save {off}%</span>
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand">{t.booking.save(off)}</span>
             </div>
           )}
           <p className="mt-0.5">
             <Price vnd={bike.price} className="font-display text-4xl font-extrabold tracking-tight" />
-            <span className="text-sm text-muted"> / day</span>
+            <span className="text-sm text-muted"> {t.common.perDaySpaced}</span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -73,7 +78,7 @@ export function BookingCard({ bike }: { bike: Bike }) {
             onClick={() => toggleSaved(bike.slug)}
             aria-pressed={saved.includes(bike.slug)}
             className="grid size-11 place-items-center rounded-full ring-1 ring-line transition hover:ring-ink/30"
-            aria-label="Save bike"
+            aria-label={t.booking.saveBike}
           >
             <Heart className={`size-5 ${saved.includes(bike.slug) ? "fill-brand text-brand" : ""}`} />
           </button>
@@ -82,7 +87,7 @@ export function BookingCard({ bike }: { bike: Bike }) {
             onClick={() => toggleCompare(bike.slug)}
             aria-pressed={compare.includes(bike.slug)}
             className={`grid size-11 place-items-center rounded-full ring-1 transition ${compare.includes(bike.slug) ? "bg-ink text-white ring-ink" : "ring-line hover:ring-ink/30"}`}
-            aria-label="Add to compare"
+            aria-label={t.booking.addCompare}
           >
             <GitCompareArrows className="size-5" />
           </button>
@@ -91,7 +96,7 @@ export function BookingCard({ bike }: { bike: Bike }) {
 
       <div className="mt-6 grid grid-cols-2 gap-3">
         <label>
-          <span className="label">Pick-up</span>
+          <span className="label">{t.booking.pickup}</span>
           <input
             type="date"
             className="input"
@@ -105,59 +110,61 @@ export function BookingCard({ bike }: { bike: Bike }) {
           />
         </label>
         <label>
-          <span className="label">Return</span>
+          <span className="label">{t.booking.return}</span>
           <input type="date" className="input" value={end} min={start ? addDays(start, 1) : undefined} onChange={(e) => e.target.value && setEnd(e.target.value)} />
         </label>
+        <div>
+          <span id="bk-qty-label" className="label">{t.booking.bikes}</span>
+          <Select
+            id="bk-qty"
+            labelledBy="bk-qty-label"
+            value={String(qty)}
+            onChange={(v) => setQty(Number(v))}
+            options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }))}
+          />
+        </div>
         <label>
-          <span className="label">Bikes</span>
-          <select className="input" value={qty} onChange={(e) => setQty(Number(e.target.value))}>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="label">Your name</span>
-          <input className="input" placeholder="Optional" value={name} onChange={(e) => setName(e.target.value)} />
+          <span className="label">{t.booking.name}</span>
+          <input className="input" placeholder={t.booking.optional} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
       </div>
 
       <dl className="mt-5 space-y-2 rounded-2xl bg-paper p-4 text-sm">
         <div className="flex justify-between">
           <dt className="text-muted">
-            {formatPrice(bike.price, currency)} × {days} day{days > 1 ? "s" : ""}{qty > 1 ? ` × ${qty}` : ""}
+            {fp(bike.price)} × {t.common.days(days)}{qty > 1 ? ` × ${qty}` : ""}
           </dt>
-          <dd className="font-medium">{formatPrice(total, currency)}</dd>
+          <dd className="font-medium">{fp(total)}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted">Helmet & safety gear</dt>
-          <dd className="font-medium text-emerald-600">Free</dd>
+          <dt className="text-muted">{t.booking.helmet}</dt>
+          <dd className="font-medium text-emerald-600">{t.booking.free}</dd>
         </div>
         <div className="flex justify-between border-t border-line pt-2 text-base">
-          <dt className="font-semibold">Estimated total</dt>
-          <dd className="font-display font-extrabold">{formatPrice(total, currency)}</dd>
+          <dt className="font-semibold">{t.booking.total}</dt>
+          <dd className="font-display font-extrabold">{fp(total)}</dd>
         </div>
         {longTerm && (
           <p className="flex gap-2 rounded-xl bg-navy-50 p-3 text-xs text-navy">
-            <Clock className="size-4 shrink-0" /> Renting {days >= 28 ? "a month or more" : "a week or more"}? Ask us for our better long-term rate.
+            <Clock className="size-4 shrink-0" /> {days >= 28 ? t.booking.longMonth : t.booking.longWeek}
           </p>
         )}
       </dl>
 
       <a href={whatsappLink(message)} target="_blank" rel="noopener noreferrer" className="btn mt-5 w-full bg-whatsapp py-3.5 text-white hover:brightness-95">
-        <WhatsAppIcon className="size-5" /> Book on WhatsApp
+        <WhatsAppIcon className="size-5" /> {t.common.bookOnWhatsApp}
       </a>
       <div className="mt-2.5 grid grid-cols-2 gap-2.5">
         <a href={zaloLink()} target="_blank" rel="noopener noreferrer" className="btn bg-zalo text-white hover:brightness-95">
           Zalo
         </a>
         <a href={`tel:${site.phones[0].tel}`} className="btn-light">
-          <Phone className="size-4" /> Call
+          <Phone className="size-4" /> {t.common.call}
         </a>
       </div>
       <ul className="mt-5 space-y-2 text-xs text-muted">
-        <li className="flex gap-2"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> Sends a booking request — we confirm availability with you before anything is paid.</li>
-        <li className="flex gap-2"><CalendarDays className="size-4 shrink-0 text-emerald-600" /> Daily, weekly & monthly rentals · 24/7 support.</li>
+        <li className="flex gap-2"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> {t.booking.requestNote}</li>
+        <li className="flex gap-2"><CalendarDays className="size-4 shrink-0 text-emerald-600" /> {t.booking.flexNote}</li>
       </ul>
     </div>
   );

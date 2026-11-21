@@ -11,10 +11,13 @@ import { whatsappLink } from "@/lib/site";
 import { Price } from "./price";
 import { useStore, MAX_COMPARE } from "./providers";
 import { WhatsAppIcon } from "./icons";
+import { useL, useT } from "@/i18n/client";
 
 export function CompareView() {
   const sp = useSearchParams();
   const { compare, toggleCompare, hydrated } = useStore();
+  const t = useT();
+  const l = useL();
   const fromUrl = useMemo(() => (sp.get("bikes") ?? "").split(",").filter((s) => getBike(s)), [sp]);
 
   // if the URL lists bikes that are not in the local compare list (shared link), adopt them
@@ -30,8 +33,8 @@ export function CompareView() {
   const key = list.map((b) => b.slug).join(",");
   useEffect(() => {
     if (!hydrated) return;
-    window.history.replaceState(null, "", key ? `/compare?bikes=${key}` : "/compare");
-  }, [hydrated, key]);
+    window.history.replaceState(null, "", l(key ? `/compare?bikes=${key}` : "/compare"));
+  }, [hydrated, key, l]);
 
   if (!list.length) {
     return (
@@ -39,9 +42,9 @@ export function CompareView() {
         <span className="grid size-14 place-items-center rounded-full bg-brand-50 text-brand">
           <GitCompareArrows className="size-6" />
         </span>
-        <h2 className="mt-4 text-xl font-bold">Nothing to compare yet</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted">Tap “Compare” on up to {MAX_COMPARE} bikes to see their prices and specs side by side.</p>
-        <Link href="/bikes" className="btn-dark mt-6">Browse bikes</Link>
+        <h2 className="mt-4 text-xl font-bold">{t.compare.emptyTitle}</h2>
+        <p className="mt-2 max-w-sm text-sm text-muted">{t.compare.emptyText(MAX_COMPARE)}</p>
+        <Link href={l("/bikes")} className="btn-dark mt-6">{t.common.browseBikes}</Link>
       </div>
     );
   }
@@ -50,7 +53,7 @@ export function CompareView() {
   const biggest = Math.max(...list.map((b) => b.cc));
   const rows: { label: string; render: (b: Bike) => React.ReactNode }[] = [
     {
-      label: "Daily price",
+      label: t.compare.rows.price,
       render: (b) => (
         <span className={b.price === cheapest && list.length > 1 ? "font-bold text-emerald-600" : "font-bold"}>
           <Price vnd={b.price} />
@@ -58,14 +61,14 @@ export function CompareView() {
         </span>
       ),
     },
-    { label: "Weekly (7 days)", render: (b) => <Price vnd={b.price * 7} /> },
-    { label: "Engine", render: (b) => <span className={b.cc === biggest && list.length > 1 ? "font-semibold text-navy" : ""}>{b.cc}cc</span> },
-    { label: "Transmission", render: (b) => b.transmission },
-    { label: "Category", render: (b) => b.category },
-    { label: "Brand", render: (b) => b.brand },
-    { label: "Model year", render: (b) => b.year ?? "—" },
-    { label: "License needed", render: (b) => (b.noLicense ? "No (50cc)" : "Yes") },
-    { label: "Photos", render: (b) => b.images.length },
+    { label: t.compare.rows.weekly, render: (b) => <Price vnd={b.price * 7} /> },
+    { label: t.compare.rows.engine, render: (b) => <span className={b.cc === biggest && list.length > 1 ? "font-semibold text-navy" : ""}>{b.cc}cc</span> },
+    { label: t.compare.rows.transmission, render: (b) => t.transmissions[b.transmission] },
+    { label: t.compare.rows.category, render: (b) => t.categories[b.category].name },
+    { label: t.compare.rows.brand, render: (b) => b.brand },
+    { label: t.compare.rows.year, render: (b) => b.year ?? "—" },
+    { label: t.compare.rows.license, render: (b) => (b.noLicense ? t.compare.licenseNo : t.compare.licenseYes) },
+    { label: t.compare.rows.photos, render: (b) => b.images.length },
   ];
   const suggestions = bikes.filter((b) => !slugs.includes(b.slug) && b.category === list[0].category).slice(0, 4);
 
@@ -79,22 +82,22 @@ export function CompareView() {
               {list.map((b) => (
                 <th key={b.slug} className="px-2 pb-4 text-left align-top font-normal">
                   <div className="card relative overflow-hidden">
-                    <button type="button" onClick={() => toggleCompare(b.slug)} className="absolute top-2 right-2 z-10 grid size-8 place-items-center rounded-full bg-white/95 shadow" aria-label={`Remove ${b.name}`}>
+                    <button type="button" onClick={() => toggleCompare(b.slug)} className="absolute top-2 right-2 z-10 grid size-8 place-items-center rounded-full bg-white/95 shadow" aria-label={t.compare.remove(b.name)}>
                       <X className="size-4" />
                     </button>
                     <div className="relative aspect-[4/3] bg-paper">
                       <Image src={b.images[0]} alt={b.name} fill sizes="300px" className="object-cover" />
                     </div>
                     <div className="p-4">
-                      <Link href={`/bikes/${b.slug}`} className="font-bold hover:text-brand">{b.name}</Link>
+                      <Link href={l(`/bikes/${b.slug}`)} className="font-bold hover:text-brand">{b.name}</Link>
                     </div>
                   </div>
                 </th>
               ))}
               {list.length < MAX_COMPARE && (
                 <th className="px-2 pb-4 align-top">
-                  <Link href="/bikes" className="grid aspect-[4/3] place-items-center rounded-2xl border-2 border-dashed border-line text-muted transition hover:border-ink/30 hover:text-ink">
-                    <span className="flex flex-col items-center gap-2 text-sm font-semibold"><Plus className="size-6" /> Add a bike</span>
+                  <Link href={l("/bikes")} className="grid aspect-[4/3] place-items-center rounded-2xl border-2 border-dashed border-line text-muted transition hover:border-ink/30 hover:text-ink">
+                    <span className="flex flex-col items-center gap-2 text-sm font-semibold"><Plus className="size-6" /> {t.compare.addBike}</span>
                   </Link>
                 </th>
               )}
@@ -115,12 +118,12 @@ export function CompareView() {
               {list.map((b) => (
                 <td key={b.slug} className="px-2 pt-5">
                   <a
-                    href={whatsappLink(`Hi Quang Nga! Is the ${b.name}${b.year ? ` (${b.year})` : ""} available? I'd like to rent it.`)}
+                    href={whatsappLink(t.compare.waAsk(`${b.name}${b.year ? ` (${b.year})` : ""}`))}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn w-full bg-whatsapp text-white hover:brightness-95"
                   >
-                    <WhatsAppIcon className="size-4" /> Book
+                    <WhatsAppIcon className="size-4" /> {t.compare.book}
                   </a>
                 </td>
               ))}
@@ -130,7 +133,7 @@ export function CompareView() {
       </div>
       {list.length < MAX_COMPARE && suggestions.length > 0 && (
         <div className="mt-14">
-          <h2 className="text-lg font-bold">Add another {list[0].category.toLowerCase()}</h2>
+          <h2 className="text-lg font-bold">{t.compare.addAnother(t.categories[list[0].category].name)}</h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {suggestions.map((b) => (
               <button key={b.slug} type="button" onClick={() => toggleCompare(b.slug)} className="chip">

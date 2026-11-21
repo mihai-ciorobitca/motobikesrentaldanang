@@ -3,20 +3,22 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useStore } from "./providers";
+import { useT } from "@/i18n/client";
 import { MessageCircle, Phone, X } from "lucide-react";
 import { FacebookIcon, WhatsAppIcon } from "./icons";
 import { site, whatsappLink, zaloLink } from "@/lib/site";
 
 export function FloatingContact() {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const { compare, hydrated } = useStore();
   const pathname = usePathname();
-  const lifted = hydrated && compare.length > 0 && pathname !== "/compare";
+  const lifted = hydrated && compare.length > 0 && !pathname.endsWith("/compare");
   const items = [
-    { label: "WhatsApp", href: whatsappLink("Hi Quang Nga! I'd like to rent a motorbike."), cls: "bg-whatsapp", icon: <WhatsAppIcon className="size-5" /> },
+    { label: "WhatsApp", href: whatsappLink(t.common.waHello), cls: "bg-whatsapp", icon: <WhatsAppIcon className="size-5" /> },
     { label: "Zalo", href: zaloLink(), cls: "bg-zalo", icon: <span className="text-[0.7rem] font-black">Zalo</span> },
     { label: "Messenger", href: site.facebook, cls: "bg-[#1877f2]", icon: <FacebookIcon className="size-5" /> },
-    { label: "Call us", href: `tel:${site.phones[0].tel}`, cls: "bg-ink", icon: <Phone className="size-5" /> },
+    { label: t.contactFab.callUs, href: `tel:${site.phones[0].tel}`, cls: "bg-ink", icon: <Phone className="size-5" /> },
   ];
   return (
     <div className={`fixed right-4 z-50 flex flex-col items-end gap-3 transition-[bottom] sm:right-6 ${lifted ? "bottom-24 sm:bottom-28" : "bottom-4 sm:bottom-6"}`}>
@@ -41,7 +43,7 @@ export function FloatingContact() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={open ? "Close contact options" : "Contact us"}
+        aria-label={open ? t.contactFab.close : t.contactFab.open}
         className="relative grid size-14 place-items-center rounded-full bg-brand text-white shadow-[0_12px_32px_-8px_rgb(229_22_31/0.7)] transition hover:scale-105"
       >
         {!open && <span className="absolute inset-0 animate-ping rounded-full bg-brand/40 [animation-duration:2.5s]" />}

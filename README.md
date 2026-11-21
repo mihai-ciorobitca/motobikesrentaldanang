@@ -23,7 +23,16 @@ Requires Node.js 20.9+.
 - **Vercel (easiest):** import the folder or repo, then deploy. No settings or environment variables are needed.
 - **Any Node host / VPS:** run `npm run build`, then `npm start` (set `PORT` to change the port). Put Nginx or Caddy in front for HTTPS.
 
-All 75 pages are pre-rendered at build time. Images are pre-compressed WebP, and Next.js serves them as AVIF/WebP at the right size for each device.
+All 144 pages (72 per language) are pre-rendered at build time. Images are pre-compressed WebP, and Next.js serves them as AVIF/WebP at the right size for each device.
+
+## Languages (English / Tiếng Việt)
+
+- English is served at the root (`/bikes`) and Vietnamese under `/vi` (`/vi/bikes`). Every page is pre-built in both languages.
+- The flag switcher in the header (and in the phone menu) switches to the same page in the other language and keeps your filters. The choice is remembered with a `lang` cookie.
+- `src/proxy.ts` handles the routing. Pages live in `src/app/[locale]/(site)/`.
+- Interface text is in `src/i18n/en.ts` and `src/i18n/vi.ts`. Both files have the same keys, so a missing translation is a type error.
+- Vietnamese bike descriptions are in `src/data/vi/bike-descriptions.json` and blog posts in `src/data/vi/posts.json`.
+- Search engines get `hreflang` links for both languages, and the sitemap lists both versions of every page.
 
 ## Features
 
@@ -34,6 +43,7 @@ All 75 pages are pre-rendered at build time. Images are pre-compressed WebP, and
   - 7 sort options and a grid/list view.
   - Filters are saved in the URL, so a search can be shared as a link.
   - On mobile, filters open in a bottom sheet.
+- **Custom dropdowns:** every dropdown on the site uses the same styled, keyboard-accessible component (`src/components/select.tsx`) instead of the browser's native selector.
 - **Search anywhere:** press ⌘K / Ctrl+K or `/` to open quick search across bikes and articles.
 - **Bike pages:**
   - Photo gallery with a full-screen viewer (swipe on mobile).
@@ -56,11 +66,15 @@ All content is plain JSON or TypeScript. No database is needed.
 
 | What | File |
 | --- | --- |
-| Bikes, prices, sale prices, photos, descriptions | `src/data/bikes.json` |
-| Blog posts | `src/data/posts.json` |
+| Bikes, prices, sale prices, photos | `src/data/bikes.json` |
+| Bike descriptions (English) | `src/data/bike-descriptions.json` |
+| Blog posts (English) | `src/data/posts.json` |
 | Google reviews shown on the site | `src/data/reviews.json` |
+| Bike descriptions in Vietnamese | `src/data/vi/bike-descriptions.json` |
+| Blog posts in Vietnamese | `src/data/vi/posts.json` |
 | Phone numbers, WhatsApp, Zalo, address, map, USD rate | `src/lib/site.ts` |
-| FAQ, one-way rental rates, "why choose us" | `src/lib/content.ts` |
+| All interface text, FAQ, one-way rental text, "why choose us" | `src/i18n/en.ts` and `src/i18n/vi.ts` |
+| One-way rental prices | `src/lib/content.ts` |
 | Colors and fonts | `src/app/globals.css` (`@theme`) |
 
 **Updating a bike:**

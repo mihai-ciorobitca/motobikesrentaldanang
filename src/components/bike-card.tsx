@@ -7,9 +7,12 @@ import type { Bike } from "@/lib/data";
 import { discountPercent } from "@/lib/format";
 import { Price } from "./price";
 import { useStore } from "./providers";
+import { useL, useT } from "@/i18n/client";
 
 export function BikeCard({ bike, priority = false, layout = "grid" }: { bike: Bike; priority?: boolean; layout?: "grid" | "list" }) {
   const { saved, compare, toggleSaved, toggleCompare } = useStore();
+  const t = useT();
+  const l = useL();
   const isSaved = saved.includes(bike.slug);
   const inCompare = compare.includes(bike.slug);
   const off = discountPercent(bike.price, bike.originalPrice);
@@ -41,14 +44,14 @@ export function BikeCard({ bike, priority = false, layout = "grid" }: { bike: Bi
         )}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {off > 0 && <span className="rounded-full bg-brand px-2.5 py-1 text-[0.7rem] font-bold text-white shadow">-{off}%</span>}
-          {bike.noLicense && <span className="rounded-full bg-white/95 px-2.5 py-1 text-[0.7rem] font-bold text-navy shadow">No license</span>}
-          {bike.category === "Big Bike" && <span className="rounded-full bg-ink/90 px-2.5 py-1 text-[0.7rem] font-bold text-white shadow">Big bike</span>}
+          {bike.noLicense && <span className="rounded-full bg-white/95 px-2.5 py-1 text-[0.7rem] font-bold text-navy shadow">{t.card.noLicense}</span>}
+          {bike.category === "Big Bike" && <span className="rounded-full bg-ink/90 px-2.5 py-1 text-[0.7rem] font-bold text-white shadow">{t.card.bigBike}</span>}
         </div>
         <button
           type="button"
           onClick={() => toggleSaved(bike.slug)}
           aria-pressed={isSaved}
-          aria-label={isSaved ? `Remove ${bike.name} from saved` : `Save ${bike.name}`}
+          aria-label={isSaved ? t.card.unsave(bike.name) : t.card.save(bike.name)}
           className="absolute top-3 right-3 z-10 grid size-9 place-items-center rounded-full bg-white/95 shadow ring-1 ring-black/5 transition hover:scale-110"
         >
           <Heart className={`size-4 transition ${isSaved ? "fill-brand text-brand" : "text-ink/70"}`} />
@@ -66,20 +69,20 @@ export function BikeCard({ bike, priority = false, layout = "grid" }: { bike: Bi
           )}
         </div>
         <h3 className="mt-1 text-[1.05rem] leading-snug font-bold">
-          <Link href={`/bikes/${bike.slug}`} className="after:absolute after:inset-0 after:content-['']">
+          <Link href={l(`/bikes/${bike.slug}`)} className="after:absolute after:inset-0 after:content-['']">
             {bike.name}
           </Link>
         </h3>
         <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink/70">
           <span className="inline-flex items-center gap-1"><Gauge className="size-3.5" /> {bike.cc}cc</span>
-          <span className="inline-flex items-center gap-1"><Settings2 className="size-3.5" /> {bike.transmission}</span>
+          <span className="inline-flex items-center gap-1"><Settings2 className="size-3.5" /> {t.transmissions[bike.transmission]}</span>
         </div>
         <div className="mt-auto flex items-end justify-between gap-2 pt-4">
           <div>
             {bike.originalPrice && <Price vnd={bike.originalPrice} className="block text-xs text-muted line-through" />}
             <p className="leading-none">
               <Price vnd={bike.price} className="font-display text-xl font-extrabold" />
-              <span className="text-xs text-muted"> /day</span>
+              <span className="text-xs text-muted"> {t.common.perDay}</span>
             </p>
           </div>
           <button
@@ -91,7 +94,7 @@ export function BikeCard({ bike, priority = false, layout = "grid" }: { bike: Bi
             }`}
           >
             {inCompare ? <Check className="size-3.5" /> : <GitCompareArrows className="size-3.5" />}
-            Compare
+            {t.common.compare}
           </button>
         </div>
       </div>

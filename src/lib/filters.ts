@@ -2,15 +2,7 @@ import type { Bike, Category, Transmission } from "./data";
 
 export type SortKey = "recommended" | "price-asc" | "price-desc" | "cc-asc" | "cc-desc" | "discount" | "name";
 
-export const sortOptions: { value: SortKey; label: string }[] = [
-  { value: "recommended", label: "Recommended" },
-  { value: "price-asc", label: "Price: low to high" },
-  { value: "price-desc", label: "Price: high to low" },
-  { value: "cc-desc", label: "Engine: biggest first" },
-  { value: "cc-asc", label: "Engine: smallest first" },
-  { value: "discount", label: "Biggest discount" },
-  { value: "name", label: "Name A–Z" },
-];
+export const sortKeys: SortKey[] = ["recommended", "price-asc", "price-desc", "cc-desc", "cc-asc", "discount", "name"];
 
 export const engineBuckets = [
   { id: "50", label: "50cc", min: 0, max: 50 },
@@ -64,7 +56,7 @@ export function parseFilters(sp: URLSearchParams): Filters {
     sale: sp.get("sale") === "1",
     noLicense: sp.get("nolicense") === "1",
     saved: sp.get("saved") === "1",
-    sort: sort && sortOptions.some((o) => o.value === sort) ? sort : "recommended",
+    sort: sort && sortKeys.includes(sort) ? sort : "recommended",
   };
 }
 

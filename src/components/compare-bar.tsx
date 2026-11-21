@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 import { GitCompareArrows, X } from "lucide-react";
 import { useStore, MAX_COMPARE } from "./providers";
 import { getBike } from "@/lib/data";
+import { useL, useT } from "@/i18n/client";
 
 export function CompareBar() {
   const { compare, toggleCompare, clearCompare, hydrated } = useStore();
   const pathname = usePathname();
-  if (!hydrated || compare.length === 0 || pathname === "/compare") return null;
+  const t = useT();
+  const l = useL();
+  if (!hydrated || compare.length === 0 || pathname.endsWith("/compare")) return null;
   const items = compare.map(getBike).filter(Boolean);
 
   return (
@@ -24,7 +27,7 @@ export function CompareBar() {
                 <Image src={b!.images[0]} alt="" fill sizes="36px" className="object-cover" />
               </span>
               <span className="hidden truncate text-xs font-medium sm:block">{b!.name}</span>
-              <button type="button" onClick={() => toggleCompare(b!.slug)} className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-white/60 hover:text-white" aria-label={`Remove ${b!.name} from compare`}>
+              <button type="button" onClick={() => toggleCompare(b!.slug)} className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-white/60 hover:text-white" aria-label={t.compareBar.remove(b!.name)}>
                 <X className="size-3.5" />
               </button>
             </li>
@@ -34,10 +37,10 @@ export function CompareBar() {
           ))}
         </ul>
         <button type="button" onClick={clearCompare} className="hidden text-xs text-white/60 hover:text-white sm:block">
-          Clear
+          {t.compareBar.clear}
         </button>
-        <Link href={`/compare?bikes=${compare.join(",")}`} className="btn-primary shrink-0 !px-4 !py-2.5">
-          Compare {items.length}
+        <Link href={l(`/compare?bikes=${compare.join(",")}`)} className="btn-primary shrink-0 !px-4 !py-2.5">
+          {t.compareBar.compare(items.length)}
         </Link>
       </div>
     </div>

@@ -11,50 +11,57 @@ import { BookingCard } from "@/components/booking-card";
 import { BikeCard } from "@/components/bike-card";
 import { Blocks } from "@/components/blocks";
 import { JsonLd } from "@/components/json-ld";
+import { getDict } from "@/i18n";
+import { isLocale, languageAlternates, localizeHref } from "@/i18n/config";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ locale: string; slug: string }> };
 
 export function generateStaticParams() {
   return bikes.map((b) => ({ slug: b.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const bike = getBike(slug);
-  if (!bike) return {};
-  const title = `${bike.name}${bike.year ? ` ${bike.year}` : ""} for rent in Da Nang — ${formatPrice(bike.price)}/day`;
+  if (!bike || !isLocale(locale)) return {};
+  const t = getDict(locale);
+  const name = `${bike.name}${bike.year ? ` ${bike.year}` : ""}`;
   return {
-    title,
-    description: `Rent the ${bike.name} (${bike.cc}cc, ${bike.transmission.toLowerCase()}) in Da Nang from ${formatPrice(bike.price)} per day. Free helmet, 24/7 support, easy WhatsApp booking.`,
-    alternates: { canonical: `/bikes/${bike.slug}` },
+    title: t.bike.metaTitle(name, formatPrice(bike.price, "VND", locale)),
+    description: t.bike.metaDesc(bike.name, bike.cc, t.transmissions[bike.transmission], formatPrice(bike.price, "VND", locale)),
+    alternates: languageAlternates(locale, `/bikes/${bike.slug}`),
     openGraph: { images: [{ url: bike.images[0] }] },
   };
 }
 
 export default async function BikePage({ params }: Props) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const bike = getBike(slug);
-  if (!bike) notFound();
+  if (!bike || !isLocale(locale)) notFound();
+  const t = getDict(locale);
+  const l = (h: string) => localizeHref(locale, h);
   const off = discountPercent(bike.price, bike.originalPrice);
   const related = relatedBikes(bike);
-  const description = bikeDescription(bike.slug);
+  const description = bikeDescription(bike.slug, locale);
+  const catName = t.categories[bike.category].name;
 
   const specs = [
-    { icon: Gauge, label: "Engine", value: `${bike.cc}cc` },
-    { icon: Settings2, label: "Transmission", value: bike.transmission },
-    { icon: Tag, label: "Brand", value: bike.brand },
-    { icon: CalendarClock, label: "Model year", value: bike.year ?? "Recent" },
-    { icon: BadgeCheck, label: "License", value: bike.noLicense ? "Not required (50cc)" : "Motorbike license / IDP" },
-    { icon: Wrench, label: "Category", value: bike.category },
+    { icon: Gauge, label: t.bike.engine, value: `${bike.cc}cc` },
+    { icon: Settings2, label: t.bike.transmission, value: t.transmissions[bike.transmission] },
+    { icon: Tag, label: t.bike.brand, value: bike.brand },
+    { icon: CalendarClock, label: t.bike.year, value: bike.year ?? t.common.recent },
+    { icon: BadgeCheck, label: t.bike.license, value: bike.noLicense ? t.bike.licenseNo : t.bike.licenseYes },
+    { icon: Wrench, label: t.bike.category, value: catName },
   ];
+  const includedIcons = [HardHat, Fuel, Headset, Wrench];
 
   return (
     <>
       <div className="container-x pt-6">
         <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-          <Link href="/" className="hover:text-ink">Home</Link>/
-          <Link href="/bikes" className="hover:text-ink">Bikes</Link>/
-          <Link href={`/bikes?category=${encodeURIComponent(bike.category)}`} className="hover:text-ink">{bike.category}</Link>/
+          <Link href={l("/")} className="hover:text-ink">{t.nav.home}</Link>/
+          <Link href={l("/bikes")} className="hover:text-ink">{t.nav.bikes}</Link>/
+          <Link href={l(`/bikes?category=${encodeURIComponent(bike.category)}`)} className="hover:text-ink">{catName}</Link>/
           <span className="text-ink">{bike.name}</span>
         </nav>
       </div>
@@ -64,11 +71,11 @@ export default async function BikePage({ params }: Props) {
           <BikeGallery
             images={bike.images}
             name={bike.name}
-            badge={off > 0 ? <span className="rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white shadow">-{off}% today</span> : undefined}
+            badge={off > 0 ? <span className="rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white shadow">{t.bike.offToday(off)}</span> : undefined}
           />
 
           <div className="mt-10">
-            <h2 className="text-xl font-bold">Specifications</h2>
+            <h2 className="text-xl font-bold">{t.bike.specs}</h2>
             <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {specs.map((s) => (
                 <div key={s.label} className="card p-4">
@@ -82,7 +89,7 @@ export default async function BikePage({ params }: Props) {
 
           {description.length > 0 && (
             <div className="mt-10">
-              <h2 className="text-xl font-bold">About this bike</h2>
+              <h2 className="text-xl font-bold">{t.bike.about}</h2>
               <div className="mt-2">
                 <Blocks blocks={description} alt={bike.name} />
               </div>
@@ -90,40 +97,38 @@ export default async function BikePage({ params }: Props) {
           )}
 
           <div className="mt-10">
-            <h2 className="text-xl font-bold">Included with every rental</h2>
+            <h2 className="text-xl font-bold">{t.bike.included}</h2>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {[
-                { icon: HardHat, t: "Free helmet & safety gear", d: "Choose any helmet that fits you." },
-                { icon: Fuel, t: "Fuel to get you going", d: "About 1 litre in the tank at pick-up." },
-                { icon: Headset, t: "24/7 support", d: "Roadside help whenever you need it." },
-                { icon: Wrench, t: "Checked after every rental", d: "Tyres, rims, oil & more inspected." },
-              ].map((x) => (
-                <li key={x.t} className="flex gap-3 rounded-2xl bg-white p-4 ring-1 ring-line/80">
-                  <x.icon className="mt-0.5 size-5 shrink-0 text-emerald-600" />
-                  <span>
-                    <span className="block text-sm font-semibold">{x.t}</span>
-                    <span className="block text-xs text-muted">{x.d}</span>
-                  </span>
-                </li>
-              ))}
+              {t.bike.includedItems.map(([title, d], i) => {
+                const Icon = includedIcons[i];
+                return (
+                  <li key={title} className="flex gap-3 rounded-2xl bg-white p-4 ring-1 ring-line/80">
+                    <Icon className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+                    <span>
+                      <span className="block text-sm font-semibold">{title}</span>
+                      <span className="block text-xs text-muted">{d}</span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
             <p className="mt-4 text-sm text-muted">
-              Bring your passport (or leave a deposit) when you pick up at {site.address}.{" "}
-              <Link href="/faq" className="font-semibold text-ink underline underline-offset-2">Read the FAQ</Link>
+              {t.bike.bring(site.address)}{" "}
+              <Link href={l("/faq")} className="font-semibold text-ink underline underline-offset-2">{t.bike.readFaq}</Link>
             </p>
           </div>
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-xs font-semibold tracking-wider text-muted uppercase">
-            {bike.brand} · {bike.category}
+            {bike.brand} · {catName}
           </p>
           <h1 className="mt-2 text-3xl leading-tight font-black sm:text-4xl">{bike.name}</h1>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
             {bike.year && <span className="rounded-full bg-ink/5 px-3 py-1">{bike.year}</span>}
             <span className="rounded-full bg-ink/5 px-3 py-1">{bike.cc}cc</span>
-            <span className="rounded-full bg-ink/5 px-3 py-1">{bike.transmission}</span>
-            {bike.noLicense && <span className="rounded-full bg-navy-50 px-3 py-1 text-navy">No license needed</span>}
+            <span className="rounded-full bg-ink/5 px-3 py-1">{t.transmissions[bike.transmission]}</span>
+            {bike.noLicense && <span className="rounded-full bg-navy-50 px-3 py-1 text-navy">{t.bike.noLicenseBadge}</span>}
           </div>
           <div className="mt-6">
             <BookingCard bike={bike} />
@@ -134,9 +139,9 @@ export default async function BikePage({ params }: Props) {
       <section className="border-t border-line bg-white py-16">
         <div className="container-x">
           <div className="flex items-end justify-between gap-4">
-            <h2 className="text-2xl font-black sm:text-3xl">Similar bikes</h2>
-            <Link href={`/bikes?category=${encodeURIComponent(bike.category)}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
-              More {bike.category.toLowerCase()} <ArrowRight className="size-4" />
+            <h2 className="text-2xl font-black sm:text-3xl">{t.bike.similar}</h2>
+            <Link href={l(`/bikes?category=${encodeURIComponent(bike.category)}`)} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
+              {t.bike.moreOf(catName)} <ArrowRight className="size-4" />
             </Link>
           </div>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -154,13 +159,13 @@ export default async function BikePage({ params }: Props) {
           name: bike.name,
           brand: { "@type": "Brand", name: bike.brand },
           image: bike.images.map((i) => `${site.url}${i}`),
-          description: description.filter((b) => b.t === "p").map((b) => b.v).join(" ").slice(0, 300) || `${bike.name} for rent in Da Nang`,
+          description: description.filter((b) => b.t === "p").map((b) => b.v).join(" ").slice(0, 300) || bike.name,
           offers: {
             "@type": "Offer",
             price: bike.price,
             priceCurrency: "VND",
             availability: "https://schema.org/InStock",
-            url: `${site.url}/bikes/${bike.slug}`,
+            url: `${site.url}${l(`/bikes/${bike.slug}`)}`,
             priceSpecification: { "@type": "UnitPriceSpecification", price: bike.price, priceCurrency: "VND", unitText: "DAY" },
           },
         }}

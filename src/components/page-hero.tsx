@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { useL, useT } from "@/i18n/client";
 
 export function PageHero({
   title,
@@ -17,6 +20,8 @@ export function PageHero({
   crumbs?: { href: string; label: string }[];
   children?: React.ReactNode;
 }) {
+  const t = useT();
+  const l = useL();
   return (
     <section className="relative overflow-hidden bg-ink text-white">
       {image && (
@@ -28,11 +33,11 @@ export function PageHero({
       <div className="pointer-events-none absolute -bottom-32 -left-20 size-96 rounded-full bg-brand/25 blur-3xl" />
       <div className="container-x relative py-14 sm:py-20">
         <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-white/60">
-          <Link href="/" className="hover:text-white">Home</Link>
+          <Link href={l("/")} className="hover:text-white">{t.nav.home}</Link>
           {crumbs.map((c) => (
             <span key={c.href} className="inline-flex items-center gap-1.5">
               <ChevronRight className="size-3" />
-              <Link href={c.href} className="hover:text-white">{c.label}</Link>
+              <Link href={l(c.href)} className="hover:text-white">{c.label}</Link>
             </span>
           ))}
         </nav>

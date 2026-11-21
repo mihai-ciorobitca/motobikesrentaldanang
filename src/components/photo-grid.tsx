@@ -3,8 +3,10 @@
 import Image from "next/image";
 import { useState } from "react";
 import { Lightbox } from "./lightbox";
+import { useT } from "@/i18n/client";
 
 export function PhotoGrid({ images, alt, limit }: { images: { src: string; width: number; height: number }[]; alt: string; limit?: number }) {
+  const t = useT();
   const [index, setIndex] = useState<number | null>(null);
   const shown = limit ? images.slice(0, limit) : images;
   return (
@@ -16,7 +18,7 @@ export function PhotoGrid({ images, alt, limit }: { images: { src: string; width
             type="button"
             onClick={() => setIndex(i)}
             className="group relative mb-3 block w-full overflow-hidden rounded-2xl bg-ink/5 sm:mb-4"
-            aria-label={`Open photo ${i + 1}`}
+            aria-label={t.gallery.openN(i + 1)}
           >
             <Image
               src={img.src}

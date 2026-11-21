@@ -5,19 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, CornerDownLeft, FileText, Search, X } from "lucide-react";
 import { useStore } from "./providers";
-import { bikes, posts } from "@/lib/data";
+import { bikes, postIndex } from "@/lib/data";
+import { useL, useLocale, useT } from "@/i18n/client";
 import { matchesQuery } from "@/lib/filters";
 import { formatPrice } from "@/lib/format";
 
 type Item = { key: string; href: string; title: string; sub: string; image?: string; kind: "bike" | "post" | "action" };
-
-const quick: Item[] = [
-  { key: "a1", href: "/bikes?category=Scooter", title: "Automatic scooters", sub: "Easy city riding", kind: "action" },
-  { key: "a2", href: "/bikes?category=Big%20Bike", title: "Big bikes 300–650cc", sub: "Honda CB650, Ninja, Rebel…", kind: "action" },
-  { key: "a3", href: "/bikes?sale=1&sort=discount", title: "Today's deals", sub: "Bikes with discounted daily price", kind: "action" },
-  { key: "a4", href: "/bikes?nolicense=1", title: "No license needed", sub: "50cc Kymco scooters", kind: "action" },
-  { key: "a5", href: "/one-way-rental", title: "One-way rental", sub: "Rent in Da Nang, return in Hue, Hanoi, Saigon…", kind: "action" },
-];
 
 export function CommandSearch() {
   const { searchOpen, setSearchOpen, currency } = useStore();
@@ -25,6 +18,10 @@ export function CommandSearch() {
   const [active, setActive] = useState(0);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const t = useT();
+  const l = useL();
+  const locale = useLocale();
+  const quick = useMemo<Item[]>(() => t.search.quick.map((q, i) => ({ key: `q${i}`, href: q.href, title: q.title, sub: q.sub, kind: "action" })), [t]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -61,31 +58,31 @@ export function CommandSearch() {
         key: x.slug,
         href: `/bikes/${x.slug}`,
         title: x.name + (x.year ? ` · ${x.year}` : ""),
-        sub: `${x.transmission} · ${x.cc}cc · ${formatPrice(x.price, currency)}/day`,
+        sub: `${t.transmissions[x.transmission]} · ${x.cc}cc · ${formatPrice(x.price, currency, locale)}${t.common.perDay}`,
         image: x.images[0],
         kind: "bike",
       }));
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const p = posts
-      .filter((x) => terms.every((t) => x.title.toLowerCase().includes(t)))
+    const p = postIndex
+      .filter((x) => terms.every((term) => x.title[locale].toLowerCase().includes(term)))
       .slice(0, 3)
-      .map<Item>((x) => ({ key: x.slug, href: `/blog/${x.slug}`, title: x.title, sub: "Blog", kind: "post" }));
+      .map<Item>((x) => ({ key: x.slug, href: `/blog/${x.slug}`, title: x.title[locale], sub: t.search.blog, kind: "post" }));
     return [
       ...b,
       ...p,
-      { key: "all", href: `/bikes?q=${encodeURIComponent(q.trim())}`, title: `See all results for “${q.trim()}”`, sub: "Open the full bike finder with filters", kind: "action" },
+      { key: "all", href: `/bikes?q=${encodeURIComponent(q.trim())}`, title: t.search.seeAll(q.trim()), sub: t.search.seeAllSub, kind: "action" },
     ];
-  }, [q, currency]);
+  }, [q, currency, t, locale, quick]);
 
   if (!searchOpen) return null;
 
   const go = (item: Item) => {
     setSearchOpen(false);
-    router.push(item.href);
+    router.push(l(item.href));
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[10vh]" role="dialog" aria-modal="true" aria-label="Search">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[10vh]" role="dialog" aria-modal="true" aria-label={t.search.aria}>
       <div className="absolute inset-0 animate-fade-in bg-ink/60 backdrop-blur-sm" onClick={() => setSearchOpen(false)} />
       <div className="relative w-full max-w-xl animate-fade-up overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-line">
         <div className="flex items-center gap-3 border-b border-line px-4">
@@ -110,16 +107,16 @@ export function CommandSearch() {
                 setSearchOpen(false);
               }
             }}
-            placeholder="Search bikes: “PCX”, “650cc”, “manual”, “Honda”…"
+            placeholder={t.search.placeholder}
             className="h-14 flex-1 bg-transparent text-base outline-none placeholder:text-muted/70"
-            aria-label="Search bikes and articles"
+            aria-label={t.search.aria}
           />
-          <button type="button" onClick={() => setSearchOpen(false)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="Close search">
+          <button type="button" onClick={() => setSearchOpen(false)} className="rounded-md p-1 text-muted hover:text-ink" aria-label={t.common.close}>
             <X className="size-5" />
           </button>
         </div>
         <ul className="max-h-[60vh] overflow-y-auto p-2">
-          {!q.trim() && <li className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide text-muted uppercase">Quick links</li>}
+          {!q.trim() && <li className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide text-muted uppercase">{t.search.quickLinks}</li>}
           {results.map((r, i) => (
             <li key={r.key}>
               <button
@@ -146,13 +143,13 @@ export function CommandSearch() {
             </li>
           ))}
           {q.trim() && results.length === 1 && (
-            <li className="px-3 py-6 text-center text-sm text-muted">No bikes match “{q}”. Try a brand or engine size.</li>
+            <li className="px-3 py-6 text-center text-sm text-muted">{t.search.noResults(q)}</li>
           )}
         </ul>
         <div className="flex items-center gap-4 border-t border-line bg-paper px-4 py-2.5 text-[0.7rem] text-muted">
-          <span><kbd className="font-semibold">↑↓</kbd> navigate</span>
-          <span><kbd className="font-semibold">↵</kbd> open</span>
-          <span><kbd className="font-semibold">esc</kbd> close</span>
+          <span><kbd className="font-semibold">↑↓</kbd> {t.search.navigate}</span>
+          <span><kbd className="font-semibold">↵</kbd> {t.search.open}</span>
+          <span><kbd className="font-semibold">esc</kbd> {t.search.close}</span>
         </div>
       </div>
     </div>

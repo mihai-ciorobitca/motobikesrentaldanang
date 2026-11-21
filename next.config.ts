@@ -10,6 +10,8 @@ const legacyBikeSlugs: Record<string, string> = {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // root layout lives in app/[locale], so unmatched URLs use app/global-not-found.tsx
+  experimental: { globalNotFound: true },
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,

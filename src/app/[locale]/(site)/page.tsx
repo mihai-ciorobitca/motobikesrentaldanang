@@ -1,4 +1,3 @@
-import { imageSize } from "@/lib/server-data";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -10,48 +9,51 @@ import { Reviews } from "@/components/reviews";
 import { PhotoGrid } from "@/components/photo-grid";
 import { SectionHeading } from "@/components/page-hero";
 import { WhatsAppIcon } from "@/components/icons";
-import { bikes, categories, dealBikes, featuredBikes, media, posts, postExcerpt } from "@/lib/data";
-import { faqs, oneWay, perks } from "@/lib/content";
+import { bikes, categories, dealBikes, featuredBikes, media } from "@/lib/data";
+import { getPosts, imageSize, postExcerpt } from "@/lib/server-data";
 import { formatDate, formatPriceShort } from "@/lib/format";
 import { site, whatsappLink } from "@/lib/site";
+import { getDict } from "@/i18n";
+import { localizeHref } from "@/i18n/config";
+import { getLocale, type LocaleParams } from "@/i18n/server";
 
 const perkIcons = [BadgeDollarSign, Bike, CalendarRange, Headset, HardHat, MousePointerClick];
 
-export default function Home() {
+export default async function Home({ params }: LocaleParams) {
+  const locale = await getLocale(params);
+  const t = getDict(locale);
+  const l = (h: string) => localizeHref(locale, h);
+  const posts = getPosts(locale);
+  const h = t.home;
   const bigBikes = bikes.filter((b) => b.category === "Big Bike").sort((a, b) => b.cc - a.cc);
   const minPrice = Math.min(...bikes.map((b) => b.price));
+  const faqs = t.faqs(site.payments.slice(0, -1).join(", "));
+
   return (
     <>
       {/* HERO */}
-      <section className="relative isolate overflow-hidden bg-ink text-white">
-        <Image src={media.hero} alt="Motorbike parked on a sunny street" fill priority sizes="100vw" className="-z-10 object-cover object-[60%_center] opacity-70" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-ink/70 via-ink/40 to-ink" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink/80 via-transparent to-transparent" />
+      <section className="relative isolate bg-ink text-white">
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <Image src={media.hero} alt={h.heroAlt} fill priority sizes="100vw" className="object-cover object-[60%_center] opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-ink/70 via-ink/40 to-ink" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/80 via-transparent to-transparent" />
+        </div>
         <div className="container-x pt-36 pb-16 sm:pt-44 lg:pt-52 lg:pb-24">
-          <p className="eyebrow animate-fade-up !text-white/80">
-            Welcome to Quang Nga · {site.yearsExperience}+ years in Da Nang
-          </p>
-          <h1 className="mt-5 max-w-4xl animate-fade-up text-[2.75rem] leading-[0.95] font-black [animation-delay:60ms] sm:text-7xl lg:text-[5.5rem]">
-            Ride Da Nang <br className="hidden sm:block" />
-            <span className="text-brand">your way.</span>
+          <p className="eyebrow animate-fade-up !text-white/80">{h.eyebrow(site.yearsExperience)}</p>
+          <h1 className={`mt-5 max-w-4xl animate-fade-up leading-[0.95] font-black [animation-delay:60ms] ${locale === "vi" ? "text-[2.35rem] sm:text-6xl lg:text-7xl" : "text-[2.75rem] sm:text-7xl lg:text-[5.5rem]"}`}>
+            {h.title1} <br className="hidden sm:block" />
+            <span className="text-brand">{h.title2}</span>
           </h1>
-          <p className="mt-6 max-w-xl animate-fade-up text-lg text-white/75 [animation-delay:120ms]">
-            New motorbikes, good speed and the best prices in Da Nang — from easy 50cc scooters to 650cc big bikes, from {formatPriceShort(minPrice)} a day.
-          </p>
-          <div className="mt-10 max-w-4xl animate-fade-up [animation-delay:180ms]">
+          <p className="mt-6 max-w-xl animate-fade-up text-lg text-white/75 [animation-delay:120ms]">{h.intro(formatPriceShort(minPrice))}</p>
+          <div className="relative z-20 mt-10 max-w-4xl animate-fade-up [animation-delay:180ms]">
             <HeroSearch />
           </div>
           <dl className="mt-12 grid max-w-3xl animate-fade-up grid-cols-2 gap-6 [animation-delay:240ms] sm:grid-cols-4">
-            {[
-              [`${bikes.length}+`, "Bikes to choose"],
-              ["50–650cc", "Scooters to big bikes"],
-              [`${site.yearsExperience}+ yrs`, "Family-run in Da Nang"],
-              ["24/7", "Rider support"],
-            ].map(([v, l]) => (
-              <div key={l} className="border-l border-white/20 pl-4">
-                <dt className="sr-only">{l}</dt>
+            {h.stats(bikes.length, site.yearsExperience).map(([v, label]) => (
+              <div key={label} className="border-l border-white/20 pl-4">
+                <dt className="sr-only">{label}</dt>
                 <dd className="font-display text-2xl font-extrabold sm:text-3xl">{v}</dd>
-                <dd className="mt-1 text-xs text-white/60">{l}</dd>
+                <dd className="mt-1 text-xs text-white/60">{label}</dd>
               </div>
             ))}
           </dl>
@@ -61,11 +63,11 @@ export default function Home() {
       {/* CATEGORIES */}
       <section className="container-x py-20 sm:py-24">
         <SectionHeading
-          eyebrow="Browse by type"
-          title="What do you want to ride?"
+          eyebrow={h.typesEyebrow}
+          title={h.typesTitle}
           action={
-            <Link href="/bikes" className="btn-light shrink-0">
-              All {bikes.length} bikes <ArrowRight className="size-4" />
+            <Link href={l("/bikes")} className="btn-light shrink-0">
+              {h.allBikes(bikes.length)} <ArrowRight className="size-4" />
             </Link>
           }
         />
@@ -76,7 +78,7 @@ export default function Home() {
             return (
               <Link
                 key={c.name}
-                href={`/bikes?category=${encodeURIComponent(c.name)}`}
+                href={l(`/bikes?category=${encodeURIComponent(c.name)}`)}
                 className={`group relative isolate flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-3xl p-5 text-white ${i === 0 ? "col-span-2 aspect-[16/10] lg:col-span-1 lg:aspect-[4/5]" : ""}`}
               >
                 <Image src={c.image} alt="" fill sizes="(min-width: 1024px) 20vw, 50vw" className="-z-10 object-cover transition duration-700 group-hover:scale-105" />
@@ -84,11 +86,9 @@ export default function Home() {
                 <span className="absolute top-4 right-4 grid size-9 place-items-center rounded-full bg-white/15 backdrop-blur transition group-hover:bg-brand">
                   <ArrowUpRight className="size-4" />
                 </span>
-                <h3 className="text-xl font-extrabold">{c.name}</h3>
-                <p className="mt-1 text-sm text-white/70">{c.blurb}</p>
-                <p className="mt-3 text-xs font-semibold text-white/90">
-                  {n.length} bikes · from {formatPriceShort(from)}/day
-                </p>
+                <h3 className="text-xl font-extrabold">{t.categories[c.name].name}</h3>
+                <p className="mt-1 text-sm text-white/70">{t.categories[c.name].blurb}</p>
+                <p className="mt-3 text-xs font-semibold text-white/90">{h.catMeta(n.length, formatPriceShort(from))}</p>
               </Link>
             );
           })}
@@ -99,12 +99,12 @@ export default function Home() {
       <section className="bg-white py-20 sm:py-24">
         <div className="container-x">
           <SectionHeading
-            eyebrow="Current deals"
-            title={<>Discounted daily prices<span className="text-brand">.</span></>}
-            intro="Popular bikes with reduced daily rates right now."
+            eyebrow={h.dealsEyebrow}
+            title={<>{h.dealsTitle}<span className="text-brand">.</span></>}
+            intro={h.dealsIntro}
             action={
-              <Link href="/bikes?sale=1&sort=discount" className="btn-light shrink-0">
-                See all {dealBikes.length} deals <ArrowRight className="size-4" />
+              <Link href={l("/bikes?sale=1&sort=discount")} className="btn-light shrink-0">
+                {h.seeDeals(dealBikes.length)} <ArrowRight className="size-4" />
               </Link>
             }
           />
@@ -124,32 +124,30 @@ export default function Home() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/85 to-ink/40" />
         <div className="container-x grid items-center gap-12 lg:grid-cols-[1fr_1.2fr]">
           <div>
-            <p className="eyebrow">Big bikes · 300–650cc</p>
+            <p className="eyebrow">{h.bigEyebrow}</p>
             <h2 className="mt-4 text-4xl leading-[1.02] font-black sm:text-5xl">
-              One of Da Nang&apos;s largest <span className="text-brand">big-bike</span> fleets.
+              {h.bigTitle1} <span className="text-brand">{h.bigTitle2}</span> {h.bigTitle3}
             </h2>
-            <p className="mt-5 max-w-md text-white/70">
-              Honda CB650 &amp; CBR650, Rebel, CB500X, Kawasaki Ninja, Yamaha MT-03 and more — serviced after every rental and ready for Hai Van Pass.
-            </p>
+            <p className="mt-5 max-w-md text-white/70">{h.bigText}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/bikes?category=Big%20Bike&sort=cc-desc" className="btn-primary">
-                Explore {bigBikes.length} big bikes <ArrowRight className="size-4" />
+              <Link href={l("/bikes?category=Big%20Bike&sort=cc-desc")} className="btn-primary">
+                {h.exploreBig(bigBikes.length)} <ArrowRight className="size-4" />
               </Link>
-              <Link href="/one-way-rental" className="btn-ghost-dark">
-                <Route className="size-4" /> One-way trips
+              <Link href={l("/one-way-rental")} className="btn-ghost-dark">
+                <Route className="size-4" /> {h.oneWayTrips}
               </Link>
             </div>
           </div>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {bigBikes.slice(0, 6).map((b) => (
               <li key={b.slug}>
-                <Link href={`/bikes/${b.slug}`} className="group block overflow-hidden rounded-2xl bg-white/5 ring-1 ring-white/10 transition hover:bg-white/10">
+                <Link href={l(`/bikes/${b.slug}`)} className="group block overflow-hidden rounded-2xl bg-white/5 ring-1 ring-white/10 transition hover:bg-white/10">
                   <div className="relative aspect-[4/3] overflow-hidden">
                     <Image src={b.images[0]} alt={b.name} fill sizes="(min-width: 640px) 200px, 45vw" className="object-cover transition duration-500 group-hover:scale-105" />
                   </div>
                   <div className="p-3">
                     <p className="truncate text-sm font-semibold">{b.name}</p>
-                    <p className="text-xs text-white/60">{b.cc}cc · {formatPriceShort(b.price)}/day</p>
+                    <p className="text-xs text-white/60">{b.cc}cc · {formatPriceShort(b.price)}{t.common.perDay}</p>
                   </div>
                 </Link>
               </li>
@@ -160,9 +158,9 @@ export default function Home() {
 
       {/* WHY US + HOW IT WORKS */}
       <section className="container-x py-20 sm:py-24">
-        <SectionHeading eyebrow="Why choose us" title="Everything you need for a worry-free ride." align="center" />
+        <SectionHeading eyebrow={h.whyEyebrow} title={h.whyTitle} align="center" />
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {perks.map((p, i) => {
+          {t.perks.map((p, i) => {
             const Icon = perkIcons[i];
             return (
               <div key={p.title} className="card group p-6 transition hover:shadow-lift">
@@ -179,28 +177,24 @@ export default function Home() {
         <div className="mt-16 overflow-hidden rounded-3xl bg-ink text-white">
           <div className="grid lg:grid-cols-[1fr_1.4fr]">
             <div className="relative min-h-64">
-              <Image src={media.about} alt="Quang Nga motorbike rental shop" fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
+              <Image src={media.about} alt={h.shopAlt} fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
             </div>
             <div className="p-8 sm:p-12">
-              <p className="eyebrow">How it works</p>
-              <h2 className="mt-3 text-3xl font-black sm:text-4xl">On the road in 3 easy steps.</h2>
+              <p className="eyebrow">{h.howEyebrow}</p>
+              <h2 className="mt-3 text-3xl font-black sm:text-4xl">{h.howTitle}</h2>
               <ol className="mt-8 space-y-6">
-                {[
-                  ["Pick your bike", "Filter by type, engine size and budget, or compare up to 3 bikes side by side."],
-                  ["Book on WhatsApp or Zalo", "Your bike and dates are pre-filled — we confirm availability in minutes."],
-                  ["Pick up & ride", `Bring your passport to ${site.addressShort}. Helmet included, tank has fuel to get you going.`],
-                ].map(([t, d], i) => (
-                  <li key={t} className="flex gap-4">
+                {h.steps(site.addressShort).map(([title, d], i) => (
+                  <li key={title} className="flex gap-4">
                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand font-display text-lg font-black">{i + 1}</span>
                     <div>
-                      <h3 className="font-bold">{t}</h3>
+                      <h3 className="font-bold">{title}</h3>
                       <p className="mt-1 text-sm text-white/65">{d}</p>
                     </div>
                   </li>
                 ))}
               </ol>
-              <a href={whatsappLink("Hi Quang Nga! I'd like to rent a motorbike.")} target="_blank" rel="noopener noreferrer" className="btn mt-9 bg-whatsapp text-white hover:brightness-95">
-                <WhatsAppIcon className="size-4" /> Chat with us now
+              <a href={whatsappLink(t.common.waHello)} target="_blank" rel="noopener noreferrer" className="btn mt-9 bg-whatsapp text-white hover:brightness-95">
+                <WhatsAppIcon className="size-4" /> {h.chat}
               </a>
             </div>
           </div>
@@ -211,11 +205,11 @@ export default function Home() {
       <section className="bg-white py-20 sm:py-24">
         <div className="container-x">
           <SectionHeading
-            eyebrow="Featured"
-            title="Popular picks from our fleet."
+            eyebrow={h.featuredEyebrow}
+            title={h.featuredTitle}
             action={
-              <Link href="/bikes" className="btn-light shrink-0">
-                Browse all <ArrowRight className="size-4" />
+              <Link href={l("/bikes")} className="btn-light shrink-0">
+                {t.common.browseAll} <ArrowRight className="size-4" />
               </Link>
             }
           />
@@ -231,19 +225,17 @@ export default function Home() {
       <section className="container-x py-20 sm:py-24">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <p className="eyebrow">One-way rental</p>
-            <h2 className="mt-3 text-3xl leading-[1.08] font-black sm:text-4xl lg:text-[2.75rem]">Rent in Da Nang. Return it anywhere in Vietnam.</h2>
-            <p className="mt-4 text-lg text-muted">
-              Ride the coast and the mountains without doubling back — drop your bike off in another city, we take care of the rest.
-            </p>
+            <p className="eyebrow">{h.oneWayEyebrow}</p>
+            <h2 className="mt-3 text-3xl leading-[1.08] font-black sm:text-4xl lg:text-[2.75rem]">{h.oneWayTitle}</h2>
+            <p className="mt-4 text-lg text-muted">{h.oneWayText}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/one-way-rental" className="btn-dark">
-                See routes & rates <ArrowRight className="size-4" />
+              <Link href={l("/one-way-rental")} className="btn-dark">
+                {h.seeRoutes} <ArrowRight className="size-4" />
               </Link>
             </div>
           </div>
           <ul className="grid grid-cols-2 gap-3">
-            {oneWay.destinations.map((d) => (
+            {t.oneWay.destinations.map((d) => (
               <li key={d.city} className="card flex items-center gap-3 p-4">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-navy-50 text-navy">
                   <MapPin className="size-5" />
@@ -262,10 +254,10 @@ export default function Home() {
       <section className="overflow-hidden bg-white py-20 sm:py-24">
         <div className="container-x">
           <SectionHeading
-            eyebrow="Customer reviews"
+            eyebrow={h.reviewsEyebrow}
             title={
               <span className="inline-flex flex-wrap items-center gap-x-3">
-                Riders love Quang Nga
+                {h.reviewsTitle}
                 <span className="inline-flex text-amber-400">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="size-7 fill-current" />
@@ -273,7 +265,7 @@ export default function Home() {
                 </span>
               </span>
             }
-            intro="Real reviews from our customers on Google Maps."
+            intro={h.reviewsIntro}
           />
           <div className="mt-10">
             <Reviews />
@@ -284,17 +276,17 @@ export default function Home() {
       {/* CUSTOMER PHOTOS */}
       <section className="container-x py-20 sm:py-24">
         <SectionHeading
-          eyebrow="Out on the road"
-          title="Real moments from our customers."
-          intro="Some actual photos of our customers' experiences at our store."
+          eyebrow={h.photosEyebrow}
+          title={h.photosTitle}
+          intro={h.photosIntro}
           action={
-            <Link href="/about#gallery" className="btn-light shrink-0">
-              More photos <ArrowRight className="size-4" />
+            <Link href={l("/about#gallery")} className="btn-light shrink-0">
+              {h.morePhotos} <ArrowRight className="size-4" />
             </Link>
           }
         />
         <div className="mt-10">
-          <PhotoGrid images={media.gallery.map((src) => ({ src, ...imageSize(src) }))} alt="Quang Nga customer photo" limit={8} />
+          <PhotoGrid images={media.gallery.map((src) => ({ src, ...imageSize(src) }))} alt={h.photoAlt} limit={8} />
         </div>
       </section>
 
@@ -303,23 +295,23 @@ export default function Home() {
         <div className="container-x grid gap-16 lg:grid-cols-2">
           <div>
             <SectionHeading
-              eyebrow="Blog & news"
-              title="Latest from the shop."
+              eyebrow={h.blogEyebrow}
+              title={h.blogTitle}
               action={
-                <Link href="/blog" className="text-sm font-semibold text-brand hover:underline">
-                  See all
+                <Link href={l("/blog")} className="text-sm font-semibold text-brand hover:underline">
+                  {t.common.seeAll}
                 </Link>
               }
             />
             <ul className="mt-8 space-y-4">
               {posts.slice(0, 3).map((p) => (
                 <li key={p.slug}>
-                  <Link href={`/blog/${p.slug}`} className="group flex gap-4 rounded-2xl p-2 transition hover:bg-paper">
+                  <Link href={l(`/blog/${p.slug}`)} className="group flex gap-4 rounded-2xl p-2 transition hover:bg-paper">
                     <span className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-xl bg-paper sm:w-28">
                       {p.cover && <Image src={p.cover} alt="" fill sizes="112px" className="object-cover transition duration-500 group-hover:scale-105" />}
                     </span>
                     <span className="min-w-0 py-1">
-                      <span className="text-xs text-muted">{formatDate(p.date)}</span>
+                      <span className="text-xs text-muted">{formatDate(p.date, locale)}</span>
                       <span className="mt-1 line-clamp-2 block font-bold group-hover:text-brand">{p.title}</span>
                       <span className="mt-1 line-clamp-2 block text-sm text-muted">{postExcerpt(p, 110)}</span>
                     </span>
@@ -330,11 +322,11 @@ export default function Home() {
           </div>
           <div>
             <SectionHeading
-              eyebrow="FAQ"
-              title="Good to know."
+              eyebrow={h.faqEyebrow}
+              title={h.faqTitle}
               action={
-                <Link href="/faq" className="text-sm font-semibold text-brand hover:underline">
-                  All questions
+                <Link href={l("/faq")} className="text-sm font-semibold text-brand hover:underline">
+                  {h.allQuestions}
                 </Link>
               }
             />
@@ -357,14 +349,14 @@ export default function Home() {
       <section className="container-x py-20">
         <div className="relative isolate overflow-hidden rounded-3xl bg-brand px-6 py-14 text-white sm:px-14 sm:py-20">
           <Zap className="absolute -top-10 -right-10 -z-10 size-72 rotate-12 text-white/10" />
-          <h2 className="max-w-2xl text-3xl leading-[1.05] font-black sm:text-5xl">Ready to ride? Your bike is waiting.</h2>
-          <p className="mt-4 max-w-xl text-white/85">Message us with your dates — we reply fast, 24/7.</p>
+          <h2 className="max-w-2xl text-3xl leading-[1.05] font-black sm:text-5xl">{h.ctaTitle}</h2>
+          <p className="mt-4 max-w-xl text-white/85">{h.ctaText}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href={whatsappLink("Hi Quang Nga! I'd like to rent a motorbike.")} target="_blank" rel="noopener noreferrer" className="btn bg-white text-ink hover:bg-white/90">
+            <a href={whatsappLink(t.common.waHello)} target="_blank" rel="noopener noreferrer" className="btn bg-white text-ink hover:bg-white/90">
               <WhatsAppIcon className="size-4 text-whatsapp" /> WhatsApp {site.whatsappLabel}
             </a>
-            <Link href="/bikes" className="btn bg-ink text-white hover:bg-ink-3">
-              Browse bikes <ArrowRight className="size-4" />
+            <Link href={l("/bikes")} className="btn bg-ink text-white hover:bg-ink-3">
+              {t.common.browseBikes} <ArrowRight className="size-4" />
             </Link>
           </div>
         </div>

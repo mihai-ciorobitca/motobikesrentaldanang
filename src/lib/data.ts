@@ -1,5 +1,5 @@
 import bikesJson from "@/data/bikes.json";
-import postsJson from "@/data/posts.json";
+import postIndexJson from "@/data/post-index.json";
 import reviewsJson from "@/data/reviews.json";
 import mediaJson from "@/data/media.json";
 
@@ -29,7 +29,8 @@ export type Post = { slug: string; title: string; date: string; cover: string | 
 export type Review = { name: string; time: number; stars: number; text: string };
 
 export const bikes = bikesJson as Bike[];
-export const posts = postsJson as Post[];
+/** Lightweight list of posts (titles in both languages) for client-side search */
+export const postIndex = postIndexJson as { slug: string; title: { en: string; vi: string } }[];
 export const reviews = (reviewsJson as Review[]).filter((r) => r.text.length > 12);
 export const media = mediaJson as {
   hero: string;
@@ -44,12 +45,12 @@ export const media = mediaJson as {
   gallery: string[];
   store: string[];
 };
-export const categories: { name: Category; blurb: string; image: string }[] = [
-  { name: "Scooter", blurb: "Easy automatic city rides", image: "/images/2025-12-edit-honda-pcx-moi-4-17310347204612071262001-1.webp" },
-  { name: "Big Bike", blurb: "300cc – 650cc power", image: "/images/2026-01-cb-650cc-new-1.webp" },
-  { name: "Sport & Naked", blurb: "Manual 150cc fun", image: "/images/2024-12-gia-xe-yamaha-tfx-15-6236.webp" },
-  { name: "Semi-Automatic", blurb: "Classic Vietnam tourer", image: bikesJson.find((b) => b.category === "Semi-Automatic")?.images[0] ?? "" },
-  { name: "50cc (No License)", blurb: "No motorbike license needed", image: bikesJson.find((b) => b.category === "50cc (No License)")?.images[0] ?? "" },
+export const categories: { name: Category; image: string }[] = [
+  { name: "Scooter", image: "/images/2025-12-edit-honda-pcx-moi-4-17310347204612071262001-1.webp" },
+  { name: "Big Bike", image: "/images/2026-01-cb-650cc-new-1.webp" },
+  { name: "Sport & Naked", image: "/images/2024-12-gia-xe-yamaha-tfx-15-6236.webp" },
+  { name: "Semi-Automatic", image: bikesJson.find((b) => b.category === "Semi-Automatic")?.images[0] ?? "" },
+  { name: "50cc (No License)", image: bikesJson.find((b) => b.category === "50cc (No License)")?.images[0] ?? "" },
 ];
 
 export const brands = Array.from(new Set(bikes.map((b) => b.brand))).sort();
@@ -62,9 +63,6 @@ export function getBike(slug: string) {
   return bikes.find((b) => b.slug === slug);
 }
 
-export function getPost(slug: string) {
-  return posts.find((p) => p.slug === slug);
-}
 
 export function relatedBikes(bike: Bike, n = 4) {
   return bikes
@@ -87,7 +85,3 @@ export const dealBikes = bikes
   .filter((b) => b.originalPrice)
   .sort((a, z) => (z.originalPrice! - z.price) / z.originalPrice! - (a.originalPrice! - a.price) / a.originalPrice!);
 
-export function postExcerpt(p: Post, len = 150) {
-  const text = p.blocks.filter((b) => b.t !== "img").map((b) => b.v).join(" ");
-  return text.length > len ? text.slice(0, len).replace(/\s+\S*$/, "") + "…" : text;
-}
